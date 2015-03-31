@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang = "en">
+<head>
+	<meta charset = "utf-8">
+	<title> Inventory Management System </title>
+	<link rel="stylesheet" href="stylesheet.css" type = "text/css">
+	<link rel="stylesheet" href="jqGrid/css/ui.jqgrid.css" type = "text/css">
+</head>
+
+<body>
+	<header id="banner" class="body">
+		<h2><a href="#">Inventory Management System </a></h2>
+	</header>
+	<hr/>
+	<div id="container" >
+		<div id = "product-detail-div">
+		    <div id = "product-detail-header" class = "request-header"> Get Product Detail! </div> 
+			<form action="javascript:getProductDetailById()">
+				<input type="submit" value = "Get detail">
+				<input type="text" name="productDetailInput" id = "productDetailInput" placeholder="Product Id">
+			</form>
+			<div id="productDetail">
+			</div>
+		</div>
+		<div id = "product-add-div">
+			<div id = "product-add-header" class = "request-header"> Add a new product in the inventory! </div>
+			<form id = "addForm" action="javascript:addNewProductInInventory()">
+				<div class="inputtext"> Product Id </div> <input class="inputbox" type="text" name="productId" id = "productId" placeholder="Product Id">
+				<br></br>
+				<div class="inputtext">Product Name</div> <input class="inputbox" type="text" name="productName" id = "productName" placeholder="Product Name">
+				<br></br>
+				<div class="inputtext"> Quantity</div> <input class="inputbox" type="text" name="quantity" id = "quantity" placeholder="Quantity">
+				<br></br>
+				<div class="inputtext">Category</div> <input class="inputbox" type="text" name="category" id = "category" placeholder="Category">
+				<br></br>
+				<input type="submit" value = "Add" style="float:left;"> <div id = "addStatus" style="float:left;margin-left:10px;"></div>
+			</form>
+		</div>
+		<div id = "inventory-update-div">
+			<div id="inventory-update-header" class = "request-header"> Update inventory! </div>
+			<form action="http://localhost:8080/app/api/inventory/batch" method="post" enctype="multipart/form-data">
+		 		<p>
+					Select a file : <input type="file" name="file" size="45" />
+			    </p>
+	 			<input type="submit" value="Upload It" />
+			</form>
+		</div>
+		<div id = "inventory-checkout" >
+			<div id="inventory-checkout-header" class="request-header">Checkout Inventory</div>
+			<form action="javascript:checkoutInventory()">
+				<div class="inputtext"> Product Id </div> <input class="inputbox" type="text" name="productId" id = "checkout-productId" placeholder="Product Id">
+				<br></br>
+				<div class="inputtext">Quantity</div> <input class="inputbox" type="text" name="quantity" id = "checkout-quantity" placeholder="Quantity">
+				<br></br>
+				<input type="submit" value = "checkout" style="float:left;"> <div id = "checkoutStatus" style="float:left;margin-left:10px;"></div>
+			</form>
+		</div>
+		<div id = "inventory-transaction-lastNhours-div">
+			<div id = "inventory-transaction-header" class = "request-header"> Get transaction history of past N hours! </div>
+			<form action="javascript:getTransactionHistory()" >
+		 		<input type="submit" value="Get transaction history" />
+				<input type="text" name="hours" id = "hours" placeholder="Hours">
+	 			<div id="transactionHistoryjqGrid">
+	 				<table id="list1"></table>
+					<div id="pager1"></div>
+				</div>
+			</form>
+		</div>
+	</div>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>  
+	<script src="jqGrid/js/i18n/grid.locale-en.js"></script> 
+    <script src="jqGrid/js/jquery.jqGrid.min.js"></script>
+	<script src="scripts.js"></script>
+</body>
+
+</html>

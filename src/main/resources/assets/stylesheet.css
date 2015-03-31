@@ -1,0 +1,86 @@
+/* Body */
+body {
+    background: #F5F4EF;
+    color: #000305;
+    font-size: 87.5%; /* Base font size: 14px */
+    font-family: 'Trebuchet MS', Trebuchet, 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    line-height: 1.429;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    overflow: scroll;
+}
+
+/* Anchors */
+a{
+    outline: 0;
+    text-decoration: none ;
+}
+a:active {
+  text-shadow: 1px 1px 1px #333;
+}
+ 
+/* Header */
+#banner {
+  margin: 0 auto;
+  height: 50px;
+}
+
+/* container */
+#container {
+    padding: 1em 5em 0 5em;
+}
+
+#product-detail-div {
+    width: 100%;
+    height: 150px;
+}
+
+#productDetail {
+    width: 80%;
+    height: 25%;
+    margin-top: 15px;
+    margin-bottom: 15px;
+    font-weight: normal;
+    border: 1px solid #545454;
+    padding: 5px;
+}
+
+#product-add-div {
+    width: 50%;
+    float :left;
+}
+
+#inventory-update-div {
+    width: 50%;
+    float: left;
+}
+
+#inventory-checkout {
+	width: 50%;
+	float: left;
+	margin-top: 26px;
+}
+.request-header {
+    margin-bottom: 10px;
+    text-decoration: underline;
+}
+
+.inputbox {
+    margin-left: 10px;
+    float: left;
+}
+.inputtext{
+    width: 100px;
+    float: left;
+}
+#inventory-transaction-lastNhours-div{
+    margin-top:45px;
+    width: 100%;
+    float:left;
+}
+
+#transactionHistoryjqGrid {
+    margin-top: 20px;
+    padding: 20px;
+}

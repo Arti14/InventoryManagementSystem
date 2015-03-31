@@ -1,0 +1,18 @@
+server:
+  type: simple
+  applicationContextPath: /app
+awsCredentials:
+ accessKeyId: <AWS access key id>
+ secretAccessKey: <AWS secret access key>
+database:
+ driverClass: com.mysql.jdbc.Driver
+ user: <username>
+ password: <password>
+ url: jdbc:mysql://localhost/inventory
+ properties:
+    charSet: UTF-8
+    hibernate.dialect: org.hibernate.dialect.MySQLDialect
+    hibernate.connection.pool_size: 5
+    hibernate.jdbc.batch_size: 10
+    hibernate.cache.use_second_level_cache: false
+ 
