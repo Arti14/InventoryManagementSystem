@@ -8,8 +8,8 @@ import javax.persistence.Table;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
-@Table(name = "inbound_transaction_status")
-public class InboundTransactionStatus {
+@Table(name = "transaction_status")
+public class TransactionStatus {
 	
 	@Id
 	@Column(name = "trans_id")
@@ -18,9 +18,9 @@ public class InboundTransactionStatus {
 	@Column(name = "trans_status")
 	private String status;
 	
-	public InboundTransactionStatus() { }
+	public TransactionStatus() { }
 	
-	public InboundTransactionStatus(String transId, String status) {
+	public TransactionStatus(String transId, String status) {
 		this.transId = transId;
 		this.status = status;
 	}

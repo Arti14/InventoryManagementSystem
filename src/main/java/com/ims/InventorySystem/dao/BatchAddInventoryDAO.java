@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.ims.InventorySystem.dao;
 
 import java.io.BufferedReader;

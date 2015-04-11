@@ -18,6 +18,7 @@ import org.apache.log4j.Logger;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.ims.InventorySystem.dao.BatchAddInventoryDAO;
+import com.ims.InventorySystem.dao.BatchCheckoutInventoryDAO;
 import com.ims.InventorySystem.dao.InventoryDAO;
 import com.ims.InventorySystem.representations.BatchAddInventoryApiRequest;
 import com.ims.InventorySystem.representations.BatchAddInventoryRequest;
@@ -34,14 +35,19 @@ public class InventoryDetailsResource {
 	private static final String INVENTORY_BATCH_ADD_BUCKET_NAME = 
 			"inventory-batch-add";
 	
+	private static final String INVENTORY_BATCH_CHECKOUT_BUCKET_NAME = 
+			"inventory-batch-checkout";
 	private final InventoryDAO dao;
 	private final BatchAddInventoryDAO batchAddInventoryDAO;
+	private final BatchCheckoutInventoryDAO batchCheckoutInventoryDAO;
 	private static final Logger LOG = Logger.getLogger(InventoryDetailsResource.class);
 	
 	public InventoryDetailsResource(InventoryDAO dao, 
-			BatchAddInventoryDAO batchAddInventoryDAO) {
+			BatchAddInventoryDAO batchAddInventoryDAO, BatchCheckoutInventoryDAO 
+			batchCheckoutInventoryDAO) {
 		this.dao = dao;
 		this.batchAddInventoryDAO = batchAddInventoryDAO;
+		this.batchCheckoutInventoryDAO = batchCheckoutInventoryDAO;
 	}
 	
 	@GET
@@ -64,7 +70,7 @@ public class InventoryDetailsResource {
 				.build();
 	}
 	
-	@POST
+	/*@POST
 	@Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	@Path("/checkout")
 	public Response checkOutInventory (ProductQuantityMap productMap) {
@@ -75,7 +81,7 @@ public class InventoryDetailsResource {
 		return Response
 				.ok("{\"success\":\"true\"}")
 				.build();
-	}
+	}*/
 	
 	@GET
 	@Path("/sales_history/{hrs}")
@@ -121,6 +127,29 @@ public class InventoryDetailsResource {
 		dao.updateQueueStatus(queueMessage.getTransactionId(), "QUEUED");
 		return Response
 				.ok(null)
+				.build();
+	}
+	
+	@POST
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	@Path("/checkout")
+	public Response checkOutInventory(
+			@FormDataParam("file") InputStream uploadedInputStream,
+			@FormDataParam("file") FormDataContentDisposition fileDetail
+			) 
+			throws IOException {
+		LOG.info(String.format("Uploading file: [%s]", fileDetail.getFileName()));
+		BatchAddInventoryRequest queueMessage = new BatchAddInventoryRequest();
+		String transactionId = UUID.randomUUID().toString();
+		queueMessage.setTransactionId(transactionId);
+		queueMessage.setBucket(INVENTORY_BATCH_CHECKOUT_BUCKET_NAME);
+		queueMessage.setKey(transactionId);
+		batchCheckoutInventoryDAO.uploadToS3(queueMessage.getBucket(), 
+				queueMessage.getKey(), uploadedInputStream);
+		batchCheckoutInventoryDAO.queueBatchCheckoutInventoryRequest(queueMessage);
+		dao.updateQueueStatus(queueMessage.getTransactionId(), "QUEUED");
+		return Response
+				.ok("{\"Transaction Id\" :" + transactionId + "}")
 				.build();
 	}
 }

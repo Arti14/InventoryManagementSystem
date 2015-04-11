@@ -3,19 +3,16 @@ package com.ims.InventorySystem;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-
-import org.glassfish.jersey.media.multipart.MultiPart;
-import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ims.InventorySystem.AppConfiguration;
 import com.ims.InventorySystem.daemon.BatchAddInventoryDaemon;
+import com.ims.InventorySystem.daemon.BatchCheckoutInventoryDaemon;
 import com.ims.InventorySystem.dao.BatchAddInventoryDAO;
+import com.ims.InventorySystem.dao.BatchCheckoutInventoryDAO;
 import com.ims.InventorySystem.dao.InventoryDAO;
-import com.ims.InventorySystem.representations.InboundTransactionStatus;
+import com.ims.InventorySystem.representations.TransactionStatus;
 import com.ims.InventorySystem.representations.Product;
 import com.ims.InventorySystem.representations.SalesHistory;
 import com.ims.InventorySystem.representations.TransactionCompositeId;
@@ -36,7 +33,7 @@ public class App extends Application<AppConfiguration>{
         new App().run(args);
     }
     
-    private final HibernateBundle<AppConfiguration> hibernate = new HibernateBundle<AppConfiguration>(Product.class, SalesHistory.class, TransactionCompositeId.class, InboundTransactionStatus.class) {
+    private final HibernateBundle<AppConfiguration> hibernate = new HibernateBundle<AppConfiguration>(Product.class, SalesHistory.class, TransactionCompositeId.class, TransactionStatus.class) {
 		//@Override
 		public DataSourceFactory getDataSourceFactory(AppConfiguration configuration) {
 			return configuration.getDataSourceFactory();
@@ -55,9 +52,13 @@ public class App extends Application<AppConfiguration>{
 		final InventoryDAO dao = new InventoryDAO(hibernate.getSessionFactory());
 		final BatchAddInventoryDAO batchAddInventoryDAO = 
 				new BatchAddInventoryDAO(c.getAwsCredentials());
-		ExecutorService service = Executors.newFixedThreadPool(2);
-		service.execute(new BatchAddInventoryDaemon(dao, batchAddInventoryDAO));
+		final BatchCheckoutInventoryDAO batchCheckoutInventoryDAO = 
+				new BatchCheckoutInventoryDAO(c.getAwsCredentials());
+		ExecutorService service1 = Executors.newFixedThreadPool(2);
+		ExecutorService service2 = Executors.newFixedThreadPool(2);
+		service1.execute(new BatchAddInventoryDaemon(dao, batchAddInventoryDAO));
+		service2.execute(new BatchCheckoutInventoryDaemon(dao, batchCheckoutInventoryDAO));
 		e.jersey().setUrlPattern("/api/*");
-		e.jersey().register(new InventoryDetailsResource(dao, batchAddInventoryDAO));
+		e.jersey().register(new InventoryDetailsResource(dao, batchAddInventoryDAO, batchCheckoutInventoryDAO));
     }
 }

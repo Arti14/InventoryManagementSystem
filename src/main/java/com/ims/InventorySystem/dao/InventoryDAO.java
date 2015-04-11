@@ -1,8 +1,6 @@
 package com.ims.InventorySystem.dao;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -11,7 +9,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List; 
 import java.util.Date;
-import java.util.Iterator;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
@@ -21,10 +18,9 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
-import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
-import com.ims.InventorySystem.representations.InboundTransactionStatus;
+import com.ims.InventorySystem.representations.TransactionStatus;
 import com.ims.InventorySystem.representations.Product;
 import com.ims.InventorySystem.representations.ProductQuantityMap;
 import com.ims.InventorySystem.representations.SalesHistory;
@@ -81,7 +77,7 @@ public class InventoryDAO extends AbstractDAO<Product> implements Serializable{
 		return productId;
 	}
 
-	public void checkOutInventoryUpdate(ProductQuantityMap productMap) {
+	/*public void checkOutInventoryUpdate(ProductQuantityMap productMap) {
 		Session session = factory.openSession();
 		Transaction tx = null;
 		String uuid = UUID.randomUUID().toString();
@@ -118,8 +114,10 @@ public class InventoryDAO extends AbstractDAO<Product> implements Serializable{
 		} finally {
 			session.close();
 		}
-	}
-
+	}*/
+	
+	
+	//list of transaction history of past N hours!
 	public List<SalesHistory> getSalesHistory(int lastNhours) {
 		Session session = factory.openSession();
 		Date dt = new Date();
@@ -152,7 +150,7 @@ public class InventoryDAO extends AbstractDAO<Product> implements Serializable{
 	public void updateQueueStatus(String transId, String status) {
 		Session session = factory.openSession();
 		Transaction tx = null;
-		InboundTransactionStatus inTransStatus = new InboundTransactionStatus(transId, status);
+		TransactionStatus inTransStatus = new TransactionStatus(transId, status);
 		String transactionId = null;
 		try {
 			tx = session.beginTransaction();
@@ -160,16 +158,16 @@ public class InventoryDAO extends AbstractDAO<Product> implements Serializable{
 				//create new row with status as "queued"
 				Serializable result = session.save(inTransStatus);
 				transactionId = (String)result;
-				LOG.info("New inbound transaction queued with Id: " + transactionId);
+				LOG.info("New transaction queued with Id: " + transactionId);
 			} else {
 				//update DB with new status
-				String hql = "Update InboundTransactionStatus set status = :st "
+				String hql = "Update TransactionStatus set status = :st "
 						+ "WHERE transId = :tId";
 				Query query = session.createQuery(hql);
 				query.setParameter("st", status);
 				query.setParameter("tId", transId);
 				int result = query.executeUpdate();
-				LOG.info("Rows affected in inbound_trasaction_status : " + result);
+				LOG.info("Rows affected in trasaction_status : " + result);
 			}
 			tx.commit();
 		} catch (HibernateException e) {
@@ -189,7 +187,7 @@ public class InventoryDAO extends AbstractDAO<Product> implements Serializable{
 		String status = null;
 		try {
 			tx = session.beginTransaction();
-			String hql = "Select status FROM InboundTransactionStatus where transId = :tId";
+			String hql = "Select status FROM TransactionStatus where transId = :tId";
 			Query query = session.createQuery(hql);
 			query.setParameter("tId", transId);
 			status = (String)query.list().get(0);
@@ -280,10 +278,10 @@ public class InventoryDAO extends AbstractDAO<Product> implements Serializable{
 					}
 				} 
 			}
-			String hql = "UPDATE InboundTransactionStatus as i "
+			String hql = "UPDATE TransactionStatus as i "
 							+ "set i.status = :status " 
 							+ "WHERE (i.status NOT LIKE '%SUCCESS%' OR "
-							+ "i.status NOT LIKE '%PARTIAL_SUCCESS%' OR "
+							+ "i.status NOT LIKE '%PARTIAL%' OR "
 							+ "i.status NOT LIKE '%FAILED%') AND "
 							+ "i.transId = :transId";
 			Query query = session.createQuery(hql);
@@ -293,7 +291,7 @@ public class InventoryDAO extends AbstractDAO<Product> implements Serializable{
 			} else if (updatedCount == 0) {
 				query.setParameter("status", "FAILED");
 			} else {
-				query.setParameter("status", "PARTIAL_SUCCESS");
+				query.setParameter("status", "PARTIAL");
 			}
 			query.executeUpdate();
 			tx.commit();
@@ -309,5 +307,106 @@ public class InventoryDAO extends AbstractDAO<Product> implements Serializable{
 			session.close();
 		}
 
+	}
+
+	public void batchCheckOutUpdate(final String transactionId,
+			final InputStream inputStream) {
+		Session session = factory.openSession();
+		Transaction tx = null;
+		BufferedReader bReader = null;
+		try {
+			tx = session.beginTransaction();
+			InputStreamReader isr = new InputStreamReader(inputStream);
+			bReader = new BufferedReader(isr);
+			String fileValues;
+			int count = 0;
+			int totalCount = 0;
+			int updatedCount = 0;
+			while ((fileValues = bReader.readLine()) != null)
+			{
+				++totalCount;
+				
+				fileValues = fileValues.trim();
+				if (fileValues.length() == 0) {
+					continue;
+				}
+				String[] values = fileValues.split(",");
+				if (values.length != 2) {
+					continue;
+				}
+				
+				long productId = 0;
+				int quantity = 0;
+				try {
+					productId = Long.parseLong(values[0].trim());
+					quantity =  Integer.parseInt(values[1].trim());
+				} catch (NumberFormatException nfe) {
+					LOG.error(nfe.getMessage(), nfe);
+					continue;
+				}
+				LOG.info("productId: "+ productId +" quantity :" + quantity);
+				if(quantity > 0) {
+					TransactionCompositeId tCompId = new TransactionCompositeId(transactionId, productId);
+					String hql = "UPDATE Product as p "
+							+ "set p.quantity = p.quantity - :quantity " 
+							+ "WHERE p.productId = :pId "
+							+ "and (quantity - :quantity) >= 0"
+							+ "and p.productId NOT IN (SELECT s.id.productId from SalesHistory s WHERE "
+							+ "s.id = :id)";
+					Query query = session.createQuery(hql);
+					query.setParameter("pId", productId);
+					query.setParameter("quantity", quantity);
+					query.setParameter("id", tCompId);
+					int result = query.executeUpdate();
+					LOG.info("Rows affected in inventory_detail : " + result);
+					if ( ++count % 10 == 0 ) {  
+						session.flush();  
+						session.clear();  
+						count = 0;
+					}
+					if(result > 0) {
+						updatedCount++;
+						SalesHistory sh = new SalesHistory();
+						TransactionCompositeId tid = new TransactionCompositeId();
+						tid.setTransId(transactionId);
+						tid.setProductId(productId);
+						sh.setId(tid);
+						sh.setQuantity(quantity);
+						sh.setTransType("outbound");
+						TransactionCompositeId result1 = (TransactionCompositeId) 
+								session.save(sh);
+						LOG.info("Transaction Id in inventory_transaction: " + result1.getTransId());
+					}
+				} 
+			}
+			String hql = "UPDATE TransactionStatus as i "
+							+ "set i.status = :status " 
+							+ "WHERE (i.status NOT LIKE '%SUCCESS%' OR "
+							+ "i.status NOT LIKE '%PARTIAL%' OR "
+							+ "i.status NOT LIKE '%FAILED%') AND "
+							+ "i.transId = :transId";
+			Query query = session.createQuery(hql);
+			query.setParameter("transId", transactionId);
+			if (updatedCount == totalCount) {
+				query.setParameter("status", "SUCCESS");
+			} else if (updatedCount == 0) {
+				query.setParameter("status", "FAILED");
+			} else {
+				query.setParameter("status", "PARTIAL");
+			}
+			query.executeUpdate();
+			tx.commit();
+			bReader.close();
+		}catch (IOException e) {
+			LOG.error("File Read Error", e);
+		} catch (HibernateException e) {
+			if (tx!=null) tx.rollback();
+			LOG.error(e); 
+			throw e;
+		} catch (Exception e) {
+			LOG.error(e);
+		} finally {
+			session.close();
+		}
 	}
 }
